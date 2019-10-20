@@ -23,4 +23,5 @@ public class VertxUtil {
     public static Completable undeployVerticleRx(Vertx vertx, String deploymentId) {
         return Rx.toCompletable(undeployVerticle(vertx, deploymentId));
     }
+
 }
