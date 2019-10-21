@@ -9,10 +9,9 @@ import com.hazelcast.map.listener.EntryAddedListener;
 import com.hazelcast.map.listener.EntryRemovedListener;
 import io.reactivex.Completable;
 import io.reactivex.Observable;
-import io.vertx.core.AbstractVerticle;
-import io.vertx.core.Context;
-import io.vertx.core.Promise;
-import io.vertx.core.eventbus.Message;
+import io.vertx.reactivex.core.AbstractVerticle;
+import io.vertx.reactivex.core.Context;
+import io.vertx.reactivex.core.eventbus.Message;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.lars.events.PunterActorEvent;
@@ -20,11 +19,9 @@ import se.lars.events.PunterActorEvent;
 import java.util.HashSet;
 import java.util.Set;
 
-import static io.vertx.reactivex.RxHelper.scheduler;
+import static io.vertx.reactivex.core.RxHelper.scheduler;
 import static java.time.Duration.ofSeconds;
 import static java.util.concurrent.TimeUnit.SECONDS;
-import static se.lars.VertxUtil.deployVerticleRx;
-import static se.lars.VertxUtil.undeployVerticleRx;
 import static se.lars.events.PunterActorEvent.PunterActorStatus.COMPLETED;
 import static se.lars.events.PunterActorEvent.PunterActorStatus.STARTED;
 
@@ -47,7 +44,7 @@ public class PunterManagerActor extends AbstractVerticle {
     }
 
     @Override
-    public void start(Promise<Void> startPromise) {
+    public Completable rxStart() {
         log.info("Punter Manager starting...");
         // listen for changes to locally owned punters.Locallity is very important here
         // all actions taken (start/stop is a reaction to changes to the distributed map)
@@ -63,7 +60,7 @@ public class PunterManagerActor extends AbstractVerticle {
         HazelcastMigrationAdapter migrationListener = new HazelcastMigrationAdapter(hazelcast);
         migrationListener.observable()
                 .filter(me -> me.getStatus() == MigrationEvent.MigrationStatus.COMPLETED)
-                .debounce(1, SECONDS, scheduler(context))
+                .debounce(1, SECONDS, scheduler(vertx))
                 .doOnNext(__ -> log.info("Migrating nodes"))
                 .flatMapCompletable(__ -> syncPunters(distributedPunters.localKeySet()))
                 .subscribe();
@@ -75,13 +72,10 @@ public class PunterManagerActor extends AbstractVerticle {
         vertx.eventBus().localConsumer(deploymentID(), this::handlePunterActorEvent);
 
         // consistency supervisor
-        vertx.setPeriodic(ofSeconds(5).toMillis(), (__) -> ensureConsistency());
+        vertx.setPeriodic(ofSeconds(10).toMillis(), (__) -> ensureConsistency());
 
         // initialize by asking for locally owned punters
-        syncPunters(distributedPunters.localKeySet())
-                .doOnComplete(startPromise::complete)
-                .doOnError(startPromise::fail)
-                .subscribe();
+        return syncPunters(distributedPunters.localKeySet());
     }
 
     private Completable syncPunters(Set<Integer> wantedPunters) {
@@ -108,7 +102,7 @@ public class PunterManagerActor extends AbstractVerticle {
         pendingDeployments.add(punterId);
 
         // deploy and ignore errors, cause consistency check will repair
-        return deployVerticleRx(vertx, new PunterActor(punterId, deploymentID()))
+        return vertx.rxDeployVerticle(new PunterActor(punterId, deploymentID()))
                 .ignoreElement()
                 .doOnError(e -> log.warn("Failed to deploy punter {} actor, caused by {}", punterId, e.getMessage()))
                 .onErrorComplete()
@@ -121,7 +115,7 @@ public class PunterManagerActor extends AbstractVerticle {
             log.info("Trying to stopping punter {} actor that is not deployed", punterId);
             return Completable.complete();
         }
-        return undeployVerticleRx(vertx, managedPunters.get(punterId))
+        return vertx.rxUndeploy(managedPunters.get(punterId))
                 .doOnError(e -> log.warn("Failed to undeploy punter {} caused by: {}", punterId, e.getMessage()))
                 .onErrorComplete();
     }

@@ -1,12 +1,12 @@
 package se.lars;
 
-import io.vertx.core.AbstractVerticle;
+import io.reactivex.Completable;
 import io.vertx.core.Promise;
+import io.vertx.reactivex.core.AbstractVerticle;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.lars.events.PunterActorEvent;
 
-import java.time.Duration;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static java.time.Duration.ofSeconds;
@@ -26,29 +26,29 @@ public class PunterActor extends AbstractVerticle {
     }
 
     @Override
-    public void start(Promise<Void> startPromise) {
-        if (punterId == 101) {
-            // simulate delay
-            vertx.setTimer(ofSeconds(101).toMillis(), __ -> {
+    public Completable rxStart() {
+        return Completable.create(source -> {
+            if (punterId == 101) {
+                // simulate delay
+                vertx.setTimer(ofSeconds(101).toMillis(), __ -> {
+                    log.info("PunterActor started, id: {}", punterId);
+                    vertx.eventBus().send(managerId, new PunterActorEvent(deploymentID(), managerId, punterId, STARTED));
+                    source.onComplete();
+                });
+            } else if (chaos.incrementAndGet() % 5 == 0) {
+                log.error("PunterActor failed, id: {}", punterId);
+                source.onError(new RuntimeException());
+            } else {
                 log.info("PunterActor started, id: {}", punterId);
                 vertx.eventBus().send(managerId, new PunterActorEvent(deploymentID(), managerId, punterId, STARTED));
-                startPromise.complete();
-            });
-        }
-        else if (chaos.incrementAndGet() % 5 == 0) {
-            log.error("PunterActor failed, id: {}", punterId);
-            startPromise.fail("Oh noes");
-        } else {
-            log.info("PunterActor started, id: {}", punterId);
-            vertx.eventBus().send(managerId, new PunterActorEvent(deploymentID(), managerId, punterId, STARTED));
-            startPromise.complete();
-        }
+                source.onComplete();
+            }
+        });
     }
 
     @Override
-    public void stop(Promise<Void> stopPromise) {
+    public void stop() {
         log.info("PunterActor stopped, id: {}", punterId);
         vertx.eventBus().send(managerId, new PunterActorEvent(deploymentID(), managerId, punterId, COMPLETED));
-        stopPromise.complete();
     }
 }

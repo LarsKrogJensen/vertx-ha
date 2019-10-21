@@ -1,9 +1,9 @@
 package se.lars;
 
-import io.vertx.core.AbstractVerticle;
-import io.vertx.core.Promise;
-import io.vertx.ext.web.Router;
-import io.vertx.ext.web.RoutingContext;
+import io.reactivex.Completable;
+import io.vertx.reactivex.core.AbstractVerticle;
+import io.vertx.reactivex.ext.web.Router;
+import io.vertx.reactivex.ext.web.RoutingContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -21,18 +21,13 @@ public class ApiVerticle extends AbstractVerticle {
     }
 
     @Override
-    public void start(Promise<Void> startPromise) {
-        vertx.createHttpServer()
+    public Completable rxStart() {
+        return vertx.createHttpServer()
                 .requestHandler(router())
-                .listen(httpPort, ar -> {
-                    if (ar.succeeded()) {
-                        log.info("HttpServer listening at port {}", ar.result().actualPort());
-                        startPromise.complete();
-                    } else {
-                        log.error("Failed to start http server on port {}", httpPort, ar.cause());
-                        startPromise.fail(ar.cause());
-                    }
-                });
+                .rxListen(httpPort)
+                .doOnError(e -> log.error("Failed to start http server on port {}", httpPort, e))
+                .doOnSuccess(server -> log.info("HttpServer listening at port {}", server.actualPort()))
+                .ignoreElement();
     }
 
     private Router router() {

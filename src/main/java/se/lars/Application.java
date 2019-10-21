@@ -1,14 +1,14 @@
 package se.lars;
 
 import com.hazelcast.core.HazelcastInstance;
-import io.vertx.core.Future;
-import io.vertx.core.Vertx;
+import io.reactivex.Single;
 import io.vertx.core.VertxOptions;
+import io.vertx.reactivex.core.Vertx;
 import io.vertx.spi.cluster.hazelcast.HazelcastClusterManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static se.lars.VertxUtil.deployVerticle;
+import static se.lars.EventBusCodec.registerEventBusMessages;
 
 public class Application {
     private static final Logger log = LoggerFactory.getLogger(Application.class);
@@ -21,38 +21,30 @@ public class Application {
 
     public void start() {
         startVertx()
-                .compose(hazelcast -> deployVerticle(vertx, new PunterManagerActor(hazelcast)))
-                .compose(__ -> deployVerticle(vertx, new ApiVerticle(config.httpPort)))
-                .setHandler(ar -> {
-                    if (ar.succeeded()) {
-                        log.info("App started successfully");
-                    } else {
-                        log.error("Failed to startup application", ar.cause());
-                        stop();
-                    }
-                });
+                .flatMap(hazelcast -> vertx.rxDeployVerticle(new PunterManagerActor(hazelcast)))
+                .flatMap(__ -> vertx.rxDeployVerticle(new ApiVerticle(config.httpPort)))
+                .doOnSuccess(__ -> log.info("App started successfully"))
+                .doOnError(e -> log.error("Failed to startup application", e))
+                .doOnError(__ -> stop())
+                .subscribe();
     }
 
     public void stop() {
-        log.info("Shuuting down");
+        log.info("Shutting down");
         if (vertx != null) {
-            vertx.close(ar -> log.info("Vertx shutdown completed"));
+            vertx.rxClose()
+                    .doOnComplete(() -> log.info("Vertx shutdown completed"))
+                    .subscribe();
         }
     }
 
-    private Future<HazelcastInstance> startVertx() {
-        return Future.future(promise -> {
-            HazelcastClusterManager clusterManager = new HazelcastClusterManager();
-            VertxOptions vertxOptions = new VertxOptions().setClusterManager(clusterManager);
-            Vertx.clusteredVertx(vertxOptions, ar -> {
-                if (ar.succeeded()) {
-                    vertx = ar.result();
-                    EventBusCodec.registerEventBusMessages(vertx.eventBus(), "se.lars.events");
-                    promise.complete(clusterManager.getHazelcastInstance());
-                } else {
-                    promise.fail(ar.cause());
-                }
-            });
-        });
+    private Single<HazelcastInstance> startVertx() {
+        HazelcastClusterManager clusterManager = new HazelcastClusterManager();
+        VertxOptions vertxOptions = new VertxOptions().setClusterManager(clusterManager);
+
+        return Vertx.rxClusteredVertx(vertxOptions)
+                .doOnSuccess(vertx -> this.vertx = vertx)
+                .doOnSuccess(vertx -> registerEventBusMessages(vertx.eventBus(), "se.lars.events"))
+                .map(__ -> clusterManager.getHazelcastInstance());
     }
 }
