@@ -6,6 +6,8 @@ import io.vertx.reactivex.ext.web.Router;
 import io.vertx.reactivex.ext.web.RoutingContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import se.lars.events.PunterLoginEvent;
+import se.lars.events.PunterLogoutEvent;
 
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -43,14 +45,16 @@ public class ApiVerticle extends AbstractVerticle {
 
     private void login(RoutingContext rc) {
         idStream(rc.request().getParam("ids")).forEach(id -> {
-            vertx.eventBus().send("login", id);
+//            log.info("Punter {} login request", id);
+            vertx.eventBus().send("login", new PunterLoginEvent(id));
         });
         rc.response().end("OK");
     }
 
     private void logout(RoutingContext rc) {
         idStream(rc.request().getParam("ids")).forEach(id -> {
-            vertx.eventBus().send("logout", id);
+//            log.info("Punter {} logout request", id);
+            vertx.eventBus().send("logout", new PunterLogoutEvent(id));
         });
         rc.response().end("OK");
     }

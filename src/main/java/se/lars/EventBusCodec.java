@@ -2,12 +2,12 @@ package se.lars;
 
 import io.github.classgraph.ClassGraph;
 import io.github.classgraph.ClassInfo;
-import io.github.classgraph.ScanResult;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.eventbus.MessageCodec;
 import io.vertx.reactivex.core.eventbus.EventBus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import se.lars.kryo.KryoCodec;
 
 
 public class EventBusCodec<T> implements MessageCodec<T, T> {
@@ -21,11 +21,21 @@ public class EventBusCodec<T> implements MessageCodec<T, T> {
 
     @Override
     public void encodeToWire(Buffer buffer, T obj) {
+//        long start = System.nanoTime();
+//        System.out.println("writing " + obj);
+        KryoCodec.encode(buffer, obj);
+//        long duration = System.nanoTime() - start;
+//        System.out.println("encoding took " + (duration/1000) + "us");
     }
 
     @Override
     public T decodeFromWire(int pos, Buffer buffer) {
-        return null;
+//        long start = System.nanoTime();
+        T decode = KryoCodec.decode(pos, buffer, type);
+//        long duration = System.nanoTime() - start;
+//        System.out.println("decoding took " + (duration/1000) + "us");
+        
+        return decode;
     }
 
     @Override
@@ -49,10 +59,9 @@ public class EventBusCodec<T> implements MessageCodec<T, T> {
     }
 
     public static void registerEventBusMessages(EventBus eventBus, String... packages) {
-        ScanResult result = new ClassGraph()
+        new ClassGraph()
                 .whitelistPackages(packages)
-                .scan();
-        result.getAllClasses().stream()
+                .scan().getAllClasses().stream()
                 .filter(EventBusCodec::nonTestClasses)
                 .forEach(cls -> registerCodec(eventBus, cls.loadClass()));
     }

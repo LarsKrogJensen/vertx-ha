@@ -28,21 +28,21 @@ public class PunterActor extends AbstractVerticle {
     @Override
     public Completable rxStart() {
         return Completable.create(source -> {
-            if (punterId == 101) {
-                // simulate delay
-                vertx.setTimer(ofSeconds(101).toMillis(), __ -> {
-                    log.info("PunterActor started, id: {}", punterId);
-                    vertx.eventBus().send(managerId, new PunterActorEvent(deploymentID(), managerId, punterId, STARTED));
-                    source.onComplete();
-                });
-            } else if (chaos.incrementAndGet() % 5 == 0) {
-                log.error("PunterActor failed, id: {}", punterId);
-                source.onError(new RuntimeException());
-            } else {
+//            if (punterId == 101) {
+//                // simulate delay
+//                vertx.setTimer(ofSeconds(101).toMillis(), __ -> {
+//                    log.info("PunterActor started, id: {}", punterId);
+//                    vertx.eventBus().send(managerId, new PunterActorEvent(deploymentID(), managerId, punterId, STARTED));
+//                    source.onComplete();
+//                });
+//            } else if (chaos.incrementAndGet() % 5 == 0) {
+//                log.error("PunterActor failed, id: {}", punterId);
+//                source.onError(new RuntimeException());
+//            } else {
                 log.info("PunterActor started, id: {}", punterId);
                 vertx.eventBus().send(managerId, new PunterActorEvent(deploymentID(), managerId, punterId, STARTED));
                 source.onComplete();
-            }
+//            }
         });
     }
 

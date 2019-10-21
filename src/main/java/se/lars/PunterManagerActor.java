@@ -15,6 +15,8 @@ import io.vertx.reactivex.core.eventbus.Message;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.lars.events.PunterActorEvent;
+import se.lars.events.PunterLoginEvent;
+import se.lars.events.PunterLogoutEvent;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -60,7 +62,7 @@ public class PunterManagerActor extends AbstractVerticle {
         HazelcastMigrationAdapter migrationListener = new HazelcastMigrationAdapter(hazelcast);
         migrationListener.observable()
                 .filter(me -> me.getStatus() == MigrationEvent.MigrationStatus.COMPLETED)
-                .debounce(1, SECONDS, scheduler(vertx))
+                .debounce(1, SECONDS, scheduler(context))
                 .doOnNext(__ -> log.info("Migrating nodes"))
                 .flatMapCompletable(__ -> syncPunters(distributedPunters.localKeySet()))
                 .subscribe();
@@ -120,12 +122,14 @@ public class PunterManagerActor extends AbstractVerticle {
                 .onErrorComplete();
     }
 
-    private void handleLogin(Message<Integer> msg) {
-        distributedPunters.put(msg.body(), msg.body());
+    private void handleLogin(Message<PunterLoginEvent> msg) {
+//        log.info("Logging in punter {}", msg.body().punterId);
+        distributedPunters.put(msg.body().punterId, msg.body().punterId);
     }
 
-    private void handleLogout(Message<Integer> msg) {
-        distributedPunters.remove(msg.body(), msg.body());
+    private void handleLogout(Message<PunterLogoutEvent> msg) {
+//        log.info("Logging out punter {}", msg.body().punterId);
+        distributedPunters.remove(msg.body().punterId, msg.body().punterId);
     }
 
     private void handlePunterActorEvent(Message<PunterActorEvent> message) {
