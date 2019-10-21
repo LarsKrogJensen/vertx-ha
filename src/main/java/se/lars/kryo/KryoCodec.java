@@ -20,8 +20,6 @@ public class KryoCodec {
         try {
             Kryo kryo = context.kryo;
             Output output = context.output;
-
-//            Output output = new Output(16*1000);
             output.reset();
             kryo.writeObject(output, object);
             byte[] bytes = output.getBuffer();
@@ -39,7 +37,8 @@ public class KryoCodec {
             Input input = context.input;
             int length = buffer.getInt(pos);
             pos += 4;
-            input.setBuffer(buffer.getBytes(pos, pos + length));
+            input.setBuffer(buffer.getBytes(), pos, length);
+//            input.setBuffer(buffer.getBytes(pos, pos + length));
             T instance = kryo.readObject(input, type);
             input.reset();
             return instance;

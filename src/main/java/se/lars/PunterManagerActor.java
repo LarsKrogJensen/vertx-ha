@@ -64,7 +64,7 @@ public class PunterManagerActor extends AbstractVerticle {
                 .filter(me -> me.getStatus() == MigrationEvent.MigrationStatus.COMPLETED)
                 .debounce(1, SECONDS, scheduler(context))
                 .doOnNext(__ -> log.info("Migrating nodes"))
-                .flatMapCompletable(__ -> syncPunters(distributedPunters.localKeySet()))
+                .flatMapCompletable(__ -> syncPunters())
                 .subscribe();
 
         // login/logout is updating the backing distributed map and let hazelcast decide which node
@@ -74,13 +74,18 @@ public class PunterManagerActor extends AbstractVerticle {
         vertx.eventBus().localConsumer(deploymentID(), this::handlePunterActorEvent);
 
         // consistency supervisor
-        vertx.setPeriodic(ofSeconds(10).toMillis(), (__) -> ensureConsistency());
+        startSupervisorTimer();
 
         // initialize by asking for locally owned punters
-        return syncPunters(distributedPunters.localKeySet());
+        return syncPunters();
     }
 
-    private Completable syncPunters(Set<Integer> wantedPunters) {
+    private void startSupervisorTimer() {
+        vertx.setTimer(ofSeconds(10).toMillis(), (__) -> ensureConsistency());
+    }
+
+    private Completable syncPunters() {
+        var wantedPunters = Set.copyOf(distributedPunters.localKeySet());
         var added = Observable.fromIterable(wantedPunters)
                 .filter(id -> !managedPunters.containsKey(id))
                 .flatMapCompletable(this::startPunterActor);
@@ -142,10 +147,16 @@ public class PunterManagerActor extends AbstractVerticle {
     }
 
     private void ensureConsistency() {
-        log.info("Managed punters {}, locally owned punters {}, pending: {}", managedPunters.size(), distributedPunters.localKeySet().size(), pendingDeployments.size());
-        if (!managedPunters.keySet().equals(distributedPunters.localKeySet())) {
+        Set<Integer> wantedPunters = Set.copyOf(distributedPunters.localKeySet());
+        log.info("Managed punters {}, locally owned punters {}, pending: {}", managedPunters.size(), wantedPunters.size(), pendingDeployments.size());
+        if (!managedPunters.keySet().equals(wantedPunters)) {
             log.warn("Managed punters not in sync to locally owned ones, synchronizing");
-            syncPunters(distributedPunters.localKeySet()).subscribe();
+            syncPunters()
+                    .doOnComplete(this::startSupervisorTimer)
+                    .doOnError(e -> log.info("Punter synchronization failed, cause: {}", e.getMessage()))
+                    .subscribe();
+        } else {
+            startSupervisorTimer();
         }
     }
 }
