@@ -37,8 +37,8 @@ public class KryoCodec {
             Input input = context.input;
             int length = buffer.getInt(pos);
             pos += 4;
-            input.setBuffer(buffer.getBytes(), pos, length);
-//            input.setBuffer(buffer.getBytes(pos, pos + length));
+//            input.setBuffer(buffer.getBytes(), pos, length);
+            input.setBuffer(buffer.getBytes(pos, pos + length));
             T instance = kryo.readObject(input, type);
             input.reset();
             return instance;

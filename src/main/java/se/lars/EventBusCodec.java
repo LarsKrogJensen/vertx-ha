@@ -22,7 +22,6 @@ public class EventBusCodec<T> implements MessageCodec<T, T> {
     @Override
     public void encodeToWire(Buffer buffer, T obj) {
 //        long start = System.nanoTime();
-//        System.out.println("writing " + obj);
         KryoCodec.encode(buffer, obj);
 //        long duration = System.nanoTime() - start;
 //        System.out.println("encoding took " + (duration/1000) + "us");

@@ -73,11 +73,8 @@ public class PunterManagerActor extends AbstractVerticle {
         vertx.eventBus().consumer("logout", this::handleLogout);
         vertx.eventBus().localConsumer(deploymentID(), this::handlePunterActorEvent);
 
-        // consistency supervisor
-        startSupervisorTimer();
-
         // initialize by asking for locally owned punters
-        return syncPunters();
+        return syncPunters().doOnComplete(this::startSupervisorTimer);
     }
 
     private void startSupervisorTimer() {
