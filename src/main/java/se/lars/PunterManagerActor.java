@@ -25,8 +25,7 @@ import java.util.Set;
 import static io.vertx.reactivex.core.RxHelper.scheduler;
 import static java.time.Duration.ofSeconds;
 import static java.util.concurrent.TimeUnit.SECONDS;
-import static se.lars.events.PunterActorEvent.PunterActorStatus.COMPLETED;
-import static se.lars.events.PunterActorEvent.PunterActorStatus.STARTED;
+import static se.lars.events.PunterActorEvent.PunterActorStatus.*;
 
 public class PunterManagerActor extends AbstractVerticle {
   private static final Logger log = LoggerFactory.getLogger(PunterManagerActor.class);
@@ -160,10 +159,8 @@ public class PunterManagerActor extends AbstractVerticle {
   private void handlePunterActorEvent(PunterActorEvent event) {
     if (event.status == STARTED) {
       this.managedPunters.put(event.punterId, event.deploymentId);
-      log.info("Adding managed punter {} total {}", event.punterId, managedPunters.size());
-    } else if (event.status == COMPLETED) {
+    } else if (event.status == COMPLETED || event.status == FAILED) {
       this.managedPunters.inverse().remove(event.deploymentId);
-      log.info("Removed managed punter {} total {}", event.punterId, managedPunters.size());
     }
   }
 
@@ -175,6 +172,7 @@ public class PunterManagerActor extends AbstractVerticle {
       syncPunters()
         .doOnComplete(this::startSupervisorTimer)
         .doOnError(e -> log.info("Punter synchronization failed, cause: {}", e.getMessage()))
+        .onErrorComplete()
         .subscribe();
     } else {
       startSupervisorTimer();
