@@ -20,6 +20,7 @@ import se.lars.events.PunterLogoutEvent;
 import se.lars.events.PunterRequest;
 
 import java.util.HashSet;
+import java.util.OptionalLong;
 import java.util.Set;
 
 import static io.vertx.reactivex.core.RxHelper.scheduler;
@@ -39,6 +40,7 @@ public class PunterManagerActor extends AbstractVerticle {
 
   // used to prevent concurrent local deployments of punters
   private final Set<Integer> pendingDeployments = new HashSet<>();
+  private OptionalLong supervisorTimer = OptionalLong.empty();
 
   public PunterManagerActor(HazelcastInstance hazelcast) {
     this.distributedPunters = hazelcast.getMap("punters");
@@ -64,7 +66,9 @@ public class PunterManagerActor extends AbstractVerticle {
       .filter(me -> me.getStatus() == MigrationEvent.MigrationStatus.COMPLETED)
       .debounce(1, SECONDS, scheduler(context))
       .doOnNext(__ -> log.info("Migrating nodes"))
+      .doOnNext(__ -> stopSupervisorTimer())
       .flatMapCompletable(__ -> syncPunters())
+      .doOnComplete(this::startSupervisorTimer)
       .subscribe();
 
     vertx.eventBus().consumer(PunterLoginEvent.class.getName(), this::handleLogin);
@@ -77,10 +81,19 @@ public class PunterManagerActor extends AbstractVerticle {
 
     // initialize by asking for locally owned punters
     return syncPunters().doOnComplete(this::startSupervisorTimer);
+//    startSupervisorTimer();
+//    return Completable.complete();
   }
 
   private void startSupervisorTimer() {
-    vertx.setTimer(ofSeconds(10).toMillis(), (__) -> ensureConsistency());
+    supervisorTimer = OptionalLong.of(vertx.setTimer(ofSeconds(10).toMillis(), (__) -> ensureConsistency()));
+  }
+
+  private void stopSupervisorTimer() {
+    supervisorTimer.ifPresent(timerId -> {
+      vertx.cancelTimer(timerId);
+      supervisorTimer = OptionalLong.empty();
+    });
   }
 
   private Completable syncPunters() {
@@ -167,7 +180,7 @@ public class PunterManagerActor extends AbstractVerticle {
   private void ensureConsistency() {
     Set<Integer> wantedPunters = Set.copyOf(distributedPunters.localKeySet());
     log.info("Managed punters {}, locally owned punters {}, pending: {}", managedPunters.size(), wantedPunters.size(), pendingDeployments.size());
-    if (!managedPunters.keySet().equals(wantedPunters)) {
+    if (!managedPunters.keySet().equals(wantedPunters) && pendingDeployments.isEmpty()) {
       log.warn("Managed punters not in sync to locally owned ones, synchronizing");
       syncPunters()
         .doOnComplete(this::startSupervisorTimer)

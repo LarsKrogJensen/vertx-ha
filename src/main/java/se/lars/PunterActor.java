@@ -30,8 +30,11 @@ public class PunterActor extends AbstractVerticle {
     vertx.eventBus().consumer(topic(HelloRequest.class, punterId), this::handleHelloRequest);
     vertx.eventBus().consumer(topic(GreetRequest.class, punterId), this::handleGreetRequest);
 
+    log.info("PunterActor started, id: {}", punterId);
+    vertx.eventBus().publish(PunterActorEvent.class.getName(), new PunterActorEvent(deploymentID(), managerId, punterId, STARTED));
+    return Completable.complete();
 
-    return Completable.create(source -> {
+//    return Completable.create(source -> {
 //            if (punterId == 101) {
 //                // simulate delay
 //                vertx.setTimer(ofSeconds(101).toMillis(), __ -> {
@@ -43,12 +46,12 @@ public class PunterActor extends AbstractVerticle {
 //                log.error("PunterActor failed, id: {}", punterId);
 //                source.onError(new RuntimeException());
 //            } else {
-      log.info("PunterActor started, id: {}", punterId);
-      source.onComplete();
+//      log.info("PunterActor started, id: {}", punterId);
+//      vertx.eventBus().publish(PunterActorEvent.class.getName(), new PunterActorEvent(deploymentID(), managerId, punterId, STARTED));
+//      source.onComplete();
 
-      vertx.eventBus().publish(PunterActorEvent.class.getName(), new PunterActorEvent(deploymentID(), managerId, punterId, STARTED));
 //            }
-    });
+//    });
   }
 
   @Override
