@@ -46,9 +46,6 @@ public class Application {
   private Single<HazelcastInstance> startVertx() {
     Config config = ConfigUtil.loadConfig();
     config.setGroupConfig(new GroupConfig().setName("mob-cluster"));
-    MapConfig punterConfig = new MapConfig("punters");
-    punterConfig.setInMemoryFormat(InMemoryFormat.OBJECT);
-    config.addMapConfig(punterConfig);
     HazelcastClusterManager clusterManager = new HazelcastClusterManager(config);
     VertxOptions vertxOptions = new VertxOptions()
 //      .setMetricsOptions(new DropwizardMetricsOptions().setEnabled(true).setJmxEnabled(true))

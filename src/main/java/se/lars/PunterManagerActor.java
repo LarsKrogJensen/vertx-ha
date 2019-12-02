@@ -2,6 +2,8 @@ package se.lars;
 
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
+import com.hazelcast.config.InMemoryFormat;
+import com.hazelcast.config.MapConfig;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IMap;
 import com.hazelcast.core.MigrationEvent;
@@ -43,6 +45,10 @@ public class PunterManagerActor extends AbstractVerticle {
   private OptionalLong supervisorTimer = OptionalLong.empty();
 
   public PunterManagerActor(HazelcastInstance hazelcast) {
+    MapConfig punterConfig = new MapConfig("punters")
+      .setInMemoryFormat(InMemoryFormat.OBJECT);
+    hazelcast.getConfig().addMapConfig(punterConfig);
+
     this.distributedPunters = hazelcast.getMap("punters");
     this.hazelcast = hazelcast;
   }
@@ -81,8 +87,6 @@ public class PunterManagerActor extends AbstractVerticle {
 
     // initialize by asking for locally owned punters
     return syncPunters().doOnComplete(this::startSupervisorTimer);
-//    startSupervisorTimer();
-//    return Completable.complete();
   }
 
   private void startSupervisorTimer() {
