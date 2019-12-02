@@ -62,7 +62,7 @@ public class PunterManagerActor extends AbstractVerticle {
 
     // handle migration that happens when nodes comes and goes
     HazelcastMigrationAdapter migrationListener = new HazelcastMigrationAdapter(hazelcast);
-    migrationListener.observable()
+    migrationListener.asObservable()
       .filter(me -> me.getStatus() == MigrationEvent.MigrationStatus.COMPLETED)
       .debounce(1, SECONDS, scheduler(context))
       .doOnNext(__ -> log.info("Migrating nodes"))

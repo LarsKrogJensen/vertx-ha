@@ -28,7 +28,7 @@ public class HazelcastMigrationAdapter implements MigrationListener {
         subject.onNext(migrationEvent);
     }
 
-    public Observable<MigrationEvent> observable() {
+    public Observable<MigrationEvent> asObservable() {
         return subject;
     }
 }
