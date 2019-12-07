@@ -2,11 +2,10 @@ package se.lars;
 
 import com.hazelcast.config.Config;
 import com.hazelcast.config.GroupConfig;
-import com.hazelcast.config.InMemoryFormat;
-import com.hazelcast.config.MapConfig;
 import com.hazelcast.core.HazelcastInstance;
 import io.reactivex.Single;
 import io.vertx.core.VertxOptions;
+import io.vertx.ext.dropwizard.DropwizardMetricsOptions;
 import io.vertx.reactivex.core.Vertx;
 import io.vertx.spi.cluster.hazelcast.ConfigUtil;
 import io.vertx.spi.cluster.hazelcast.HazelcastClusterManager;
@@ -48,7 +47,7 @@ public class Application {
     config.setGroupConfig(new GroupConfig().setName("mob-cluster"));
     HazelcastClusterManager clusterManager = new HazelcastClusterManager(config);
     VertxOptions vertxOptions = new VertxOptions()
-//      .setMetricsOptions(new DropwizardMetricsOptions().setEnabled(true).setJmxEnabled(true))
+      .setMetricsOptions(new DropwizardMetricsOptions().setEnabled(true))
       .setClusterManager(clusterManager);
 
     return Vertx.rxClusteredVertx(vertxOptions)

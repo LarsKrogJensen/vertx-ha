@@ -67,14 +67,17 @@ public class PunterManagerActor extends AbstractVerticle {
     });
 
     // handle migration that happens when nodes comes and goes
+    // hazelcast 4 will improve on migration listener to give one complete event and not 271 that we now debounce...
+    // todo: fugure out how to flat map a completed so that it returns an observable
     HazelcastMigrationAdapter migrationListener = new HazelcastMigrationAdapter(hazelcast);
     migrationListener.asObservable()
       .filter(me -> me.getStatus() == MigrationEvent.MigrationStatus.COMPLETED)
       .debounce(1, SECONDS, scheduler(context))
       .doOnNext(__ -> log.info("Migrating nodes"))
       .doOnNext(__ -> stopSupervisorTimer())
-      .flatMapCompletable(__ -> syncPunters())
-      .doOnComplete(this::startSupervisorTimer)
+      .flatMapSingle(__ -> syncPunters().toSingle(() -> ""))
+      .doOnNext(__ -> log.info("Migrating nodes completed"))
+      .doOnNext(__ -> startSupervisorTimer())
       .subscribe();
 
     vertx.eventBus().consumer(PunterLoginEvent.class.getName(), this::handleLogin);
@@ -86,7 +89,9 @@ public class PunterManagerActor extends AbstractVerticle {
       .subscribe(this::handlePunterActorEvent);
 
     // initialize by asking for locally owned punters
-    return syncPunters().doOnComplete(this::startSupervisorTimer);
+    return syncPunters()
+      .doOnComplete(this::startSupervisorTimer)
+      .doOnComplete(() -> log.info("Punter Manager started"));
   }
 
   private void startSupervisorTimer() {

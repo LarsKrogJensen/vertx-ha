@@ -47,7 +47,6 @@ public class ApiVerticle extends AbstractVerticle {
 
   private void login(RoutingContext rc) {
     idStream(rc.request().getParam("ids")).forEach(id -> {
-//            log.info("Punter {} login request", id);
       vertx.eventBus().send(PunterLoginEvent.class.getName(), new PunterLoginEvent(id));
     });
     rc.response().end("OK");
@@ -55,7 +54,6 @@ public class ApiVerticle extends AbstractVerticle {
 
   private void logout(RoutingContext rc) {
     idStream(rc.request().getParam("ids")).forEach(id -> {
-//            log.info("Punter {} logout request", id);
       vertx.eventBus().send(PunterLogoutEvent.class.getName(), new PunterLogoutEvent(id));
     });
     rc.response().end("OK");

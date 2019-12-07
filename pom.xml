@@ -10,7 +10,7 @@
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <vertx.version>3.8.3</vertx.version>
+    <vertx.version>3.8.4</vertx.version>
     <maven-compiler-plugin.version>3.8.0</maven-compiler-plugin.version>
   </properties>
 
@@ -18,7 +18,12 @@
     <dependency>
       <groupId>com.hazelcast</groupId>
       <artifactId>hazelcast</artifactId>
-      <version>3.12.2</version>
+      <version>3.12.4</version>
+    </dependency>
+    <dependency>
+        <groupId>io.reactivex.rxjava2</groupId>
+        <artifactId>rxjava</artifactId>
+        <version>2.2.15</version>
     </dependency>
     <dependency>
       <groupId>ch.qos.logback</groupId>
@@ -39,11 +44,23 @@
       <groupId>io.vertx</groupId>
       <artifactId>vertx-hazelcast</artifactId>
       <version>${vertx.version}</version>
+      <exclusions>
+        <exclusion>
+          <artifactId>hazelcast</artifactId>
+          <groupId>com.hazelcast</groupId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>io.vertx</groupId>
       <artifactId>vertx-rx-java2</artifactId>
       <version>${vertx.version}</version>
+      <exclusions>
+        <exclusion>
+          <artifactId>rxjava</artifactId>
+          <groupId>io.reactivex.rxjava2</groupId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>io.vertx</groupId>
@@ -66,7 +83,12 @@
       <artifactId>kryo</artifactId>
       <version>5.0.0-RC4</version>
     </dependency>
-
+    <dependency>
+      <groupId>org.spockframework</groupId>
+      <artifactId>spock-core</artifactId>
+      <version>RELEASE</version>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
 
   <build>
