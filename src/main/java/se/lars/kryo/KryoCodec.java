@@ -7,7 +7,7 @@ import com.esotericsoftware.kryo.util.Pool;
 import io.vertx.core.buffer.Buffer;
 
 public class KryoCodec {
-    private static final Pool<KryoContext> pool = new Pool<>(true, false, Runtime.getRuntime().availableProcessors()) {
+    private static final Pool<KryoContext> pool = new Pool<>(true, false, Runtime.getRuntime().availableProcessors() * 2) {
         @Override
         protected KryoContext create() {
             return new KryoContext();

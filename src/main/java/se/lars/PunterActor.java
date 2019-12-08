@@ -31,7 +31,7 @@ public class PunterActor extends AbstractVerticle {
     vertx.eventBus().consumer(topic(GreetRequest.class, punterId), this::handleGreetRequest);
 
     log.info("PunterActor started, id: {}", punterId);
-    vertx.eventBus().publish(PunterActorEvent.class.getName(), new PunterActorEvent(deploymentID(), managerId, punterId, STARTED));
+    vertx.eventBus().send(PunterActorEvent.class.getName(), new PunterActorEvent(deploymentID(), managerId, punterId, STARTED));
     return Completable.complete();
 
 //    return Completable.create(source -> {
@@ -57,7 +57,7 @@ public class PunterActor extends AbstractVerticle {
   @Override
   public void stop() {
     log.info("PunterActor stopped, id: {}", punterId);
-    vertx.eventBus().publish(PunterActorEvent.class.getName(), new PunterActorEvent(deploymentID(), managerId, punterId, COMPLETED));
+    vertx.eventBus().send(PunterActorEvent.class.getName(), new PunterActorEvent(deploymentID(), managerId, punterId, COMPLETED));
   }
 
   private void handleHelloRequest(Message<HelloRequest> msg) {
