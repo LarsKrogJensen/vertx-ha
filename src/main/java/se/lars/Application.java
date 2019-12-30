@@ -1,7 +1,6 @@
 package se.lars;
 
 import com.hazelcast.config.Config;
-import com.hazelcast.config.GroupConfig;
 import com.hazelcast.core.HazelcastInstance;
 import io.reactivex.Single;
 import io.vertx.core.VertxOptions;
@@ -43,7 +42,7 @@ public class Application {
 
   private Single<HazelcastInstance> startVertx() {
     Config config = ConfigUtil.loadConfig();
-    config.setGroupConfig(new GroupConfig().setName("mob-cluster"));
+    config.setClusterName("mob-cluster");
     HazelcastClusterManager clusterManager = new HazelcastClusterManager(config);
     VertxOptions vertxOptions = new VertxOptions()
 //      .setMetricsOptions(new DropwizardMetricsOptions().setEnabled(true))

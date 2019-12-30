@@ -4,8 +4,7 @@ import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
 import com.hazelcast.config.MapConfig;
 import com.hazelcast.core.HazelcastInstance;
-import com.hazelcast.core.IMap;
-import com.hazelcast.core.MigrationEvent;
+import com.hazelcast.map.IMap;
 import com.hazelcast.map.listener.EntryAddedListener;
 import com.hazelcast.map.listener.EntryRemovedListener;
 import io.reactivex.Completable;
@@ -28,7 +27,6 @@ import java.util.concurrent.TimeUnit;
 
 import static io.vertx.reactivex.core.RxHelper.scheduler;
 import static java.time.Duration.ofSeconds;
-import static java.util.concurrent.TimeUnit.SECONDS;
 import static se.lars.events.PunterActorEvent.PunterActorStatus.*;
 
 public class PunterManagerActor extends AbstractVerticle {
@@ -72,13 +70,12 @@ public class PunterManagerActor extends AbstractVerticle {
     // todo: fugure out how to flat map a completed so that it returns an observable
     HazelcastMigrationAdapter migrationListener = new HazelcastMigrationAdapter(hazelcast);
     migrationListener.asObservable()
-      .filter(me -> me.getStatus() == MigrationEvent.MigrationStatus.COMPLETED)
-      .debounce(1, SECONDS, scheduler(context))
-      .doOnNext(__ -> log.info("Migrating nodes"))
-      .doOnNext(__ -> stopSupervisorTimer())
-      .flatMapSingle(__ -> syncPunters().toSingle(() -> true))
-      .doOnNext(__ -> log.info("Migrating nodes completed"))
-      .doOnNext(__ -> startSupervisorTimer())
+      .observeOn(scheduler(context))
+      .doOnNext(state -> log.info("Migrating nodes, state {}", state))
+      .doOnNext(state -> stopSupervisorTimer())
+      .flatMapSingle(state -> syncPunters().toSingle(() -> state))
+      .doOnNext(state -> log.info("Migrating nodes completed"))
+      .doOnNext(state -> startSupervisorTimer())
       .subscribe();
 
     vertx.eventBus().localConsumer(PunterLoginEvent.class.getName(), this::handleLogin);
@@ -97,7 +94,7 @@ public class PunterManagerActor extends AbstractVerticle {
 
   private void startSupervisorTimer() {
     if (supervisorTimer.isEmpty()) {
-      supervisorTimer = OptionalLong.of(vertx.setTimer(ofSeconds(10).toMillis(), (__) -> ensureConsistency()));
+      supervisorTimer = OptionalLong.of(vertx.setPeriodic(ofSeconds(10).toMillis(), (__) -> ensureConsistency()));
     }
   }
 
