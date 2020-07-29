@@ -65,9 +65,8 @@ public class PunterManagerActor extends AbstractVerticle {
       context.runOnContext((__) -> stopPunterActor(event.getKey()).subscribe());
     });
 
+
     // handle migration that happens when nodes comes and goes
-    // hazelcast 4 will improve on migration listener to give one complete event and not 271 that we now debounce...
-    // todo: fugure out how to flat map a completed so that it returns an observable
     HazelcastMigrationAdapter migrationListener = new HazelcastMigrationAdapter(hazelcast);
     migrationListener.asObservable()
       .observeOn(scheduler(context))
