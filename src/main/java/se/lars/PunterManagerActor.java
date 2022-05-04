@@ -45,7 +45,10 @@ public class PunterManagerActor extends AbstractVerticle {
 
   public PunterManagerActor(HazelcastInstance hazelcast) {
     MapConfig punterConfig = new MapConfig("punters")
-      .setBackupCount(2);
+        .setPerEntryStatsEnabled(false)
+        .setStatisticsEnabled(false)
+        .setAsyncBackupCount(1)
+        .setBackupCount(0);
     hazelcast.getConfig().addMapConfig(punterConfig);
 
     this.distributedPunters = hazelcast.getMap("punters");

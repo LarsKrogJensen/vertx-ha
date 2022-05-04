@@ -9,8 +9,8 @@ public class RetryWithDelay implements Function<Flowable<? extends Throwable>, F
 
   private final int maxRetryCount;
   private final int retryDelay;
+  private final TimeUnit timeUnit;
   private int retryCount;
-  private TimeUnit timeUnit;
 
   public RetryWithDelay(final int maxRetryCount, final int retryDelay, final TimeUnit timeUnit) {
     this.maxRetryCount = maxRetryCount;

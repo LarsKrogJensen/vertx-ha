@@ -29,6 +29,8 @@ public class Application {
       .doOnError(e -> log.error("Failed to startup application", e))
       .doOnError(__ -> stop())
       .subscribe();
+
+    Runtime.getRuntime().addShutdownHook(new Thread(this::stop));
   }
 
   public void stop() {
@@ -41,9 +43,11 @@ public class Application {
   }
 
   private Single<HazelcastInstance> startVertx() {
-    Config config = ConfigUtil.loadConfig();
-    config.setClusterName("mob-cluster");
-    HazelcastClusterManager clusterManager = new HazelcastClusterManager(config);
+    Config hazelcastConfig = ConfigUtil.loadConfig();
+    hazelcastConfig.setClusterName("mob-cluster");
+    hazelcastConfig.getNetworkConfig().getJoin().getMulticastConfig().setMulticastGroup("224.0.0.1").setEnabled(true);
+
+    HazelcastClusterManager clusterManager = new HazelcastClusterManager(hazelcastConfig);
     VertxOptions vertxOptions = new VertxOptions()
 //      .setMetricsOptions(new DropwizardMetricsOptions().setEnabled(true))
       .setClusterManager(clusterManager);

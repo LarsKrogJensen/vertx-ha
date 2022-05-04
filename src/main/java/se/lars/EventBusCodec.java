@@ -50,8 +50,7 @@ public class EventBusCodec<T> implements MessageCodec<T, T> {
     }
 
     public static void registerEventBusMessages(EventBus eventBus, String... packages) {
-        new ClassGraph()
-                .whitelistPackages(packages)
+        new ClassGraph().acceptPackages(packages)
                 .scan().getAllClasses().stream()
                 .filter(EventBusCodec::nonTestClasses)
                 .forEach(cls -> registerCodec(eventBus, cls.loadClass()));
